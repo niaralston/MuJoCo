@@ -1,0 +1,122 @@
+# Bipedal Walking Simulation Project - MuJoCo Implementation
+
+#MAIN INSTRUCTION: I haven't use mujoco before so make it very simple for me, go slow, and help me build up a simple model for my robot (making detailed comments to explain what your doing in the code)
+
+## Project Overview
+You are helping develop a MuJoCo simulation for investigating how foot compliance and curvature in soft inflatable feet influence stability and energetic efficiency in minimally actuated passive dynamic bipedal walkers. This simulation will validate experimental results from a physical inflatable robot prototype.
+
+## Research Goals
+- Investigate foot compliance and curvature effects on walking stability
+- Measure energetic efficiency of minimally actuated bipedal walking  
+- Validate simulation results against physical inflatable robot prototype
+- Analyze gait stability using Poincaré maps and eigenvalue analysis
+- Compare rigid vs. compliant foot models
+
+## Development Process (Follow This Sequence)
+1. Start with existing MuJoCo soft sphere models
+2. Integrate with basic bipedal walker structure
+3. Implement specific compliance parameters for inflatable feet
+4. Add Poincaré map analysis using Python scipy
+5. Modify soft foot model for inflatable characteristics (pressure-volume relationships)
+6. Add pneumatic pressure constraints and dynamics
+7. Implement knee joints with proper ground clearance and swing dynamics
+8. Energy efficiency analysis using MuJoCo's built-in torque tracking
+9. Compare simulation results with physical robot data
+10. Extend to full 3D walking simulation
+11. Advanced stability analysis (basin of attraction, bifurcation analysis)
+
+## Technical Specifications
+
+### Robot Parameters (Match Physical Prototype)
+- Mass: 2.5 kg (inflatable structure)
+- Height: 1.0 m
+- Inflatable polyurethane-coated nylon limbs
+- Servo-driven hip and knee actuation
+- Hemispherical compliant feet
+- Continuous blower for pressure maintenance
+
+
+### Control Strategy
+- Minimal actuation: Hip and knee servos only
+- Swing phase knee flexion for ground clearance
+- Passive dynamics during stance phase
+- Pressure-dependent compliance in feet
+
+### Analysis Methods
+- Cost of Transport (CoT) calculations (Do first)
+- Poincaré maps
+- Eigenvalue analysis for limit cycle stability
+- Energy efficiency: Integrate actuator torques over gait cycle
+
+## Code Style and Structure
+
+### File Organization
+
+### MuJoCo Model Guidelines
+- Always include proper `<contact>` specifications for foot-ground interaction
+- Use meaningful body and joint names (left_hip, right_knee, etc.)
+- Include `<default>` classes for consistent parameters
+- Use `<actuator>` with appropriate dynamics models
+
+### Python Code Guidelines
+- Implement proper simulation loop with fixed timestep
+- Use `numpy` and `scipy` for numerical analysis
+- Use `matplotlib` for visualization and plotting
+- Implement data logging for all relevant variables
+- Use object-oriented design for controllers and analyzers
+
+### Key Libraries and Dependencies
+```python
+import mujoco
+import numpy as np
+import scipy.optimize
+import scipy.linalg
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+
+### Overall Design Philosophy
+- **Baymax-inspired**: Soft inflatable healthcare robot aesthetic
+- **Hybrid construction**: Rigid internal frame for hips + soft inflatable exterior in leg an hip.
+- **Minimal actuation**: Only hip and knee servos, rest is passive dynamics
+- **Pneumatically maintained**: Continuous blower keeps structure inflated
+
+
+#### **Inflatable Limb Construction**
+- **Material**: Polyurethane-coated nylon fabric (airtight, flexible, durable)
+- **Structure**: Each leg = inflatable thigh + inflatable shin
+- **Joint design**: Sewn together at knee with leaflet cutout for flexibility
+- **Pressure source**: Continuous blower (12V 5A) maintains internal pressure
+- **Shape**: Rectangular cross-section (future: oval for better sealing)
+- **Attachment**: Soft "pants" secured to rigid hip frame via belt tension around legs to hip
+
+#### **Foot Design**
+- **Shape**: Hemispherical inflatable feet
+- **Function**: Passive stabilizers with spring-like response to tipping
+- **Material**: Same polyurethane-coated nylon as limbs
+- **Compliance**: Pressure-dependent stiffness (higher pressure = stiffer)
+- **Contact**: Curved surface for smooth ground interaction
+
+### Actuation System Details
+
+#### **Hip Actuation (Thigh Control)**
+- **Actuator**: Positional servo motor
+- **Mechanism**: Pushrod connected via pin joint to servo horn
+- **Motion**: 180° servo rotation → pushrod extends → thigh flexes forward
+- **States**: Two discrete positions (neutral upright, forward extended)
+- **Current limitation**: Only forward motion (no retraction yet)
+- **Guidance**: Flexible plastic sheet glued to inner thigh wall to bias bending direction
+- **Power**: 6V supply (insufficient current from Arduino 5V)
+
+
+### Electronics and Control System
+- **Microcontroller**: Arduino Uno
+- **Power system**: 
+  - 6V 5A dedicated supply for servos (4 total)
+  - 12V 5A supply for blower
+  - Future: Single battery-powered system with voltage regulation
+- **Servo configuration**:
+  - 2x continuous rotation servos (knees)
+  - 2x positional servos (hips/thighs)
+-

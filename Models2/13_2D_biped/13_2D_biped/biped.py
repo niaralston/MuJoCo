@@ -4,11 +4,10 @@
 # The robot uses telescoping (sliding) legs instead of bending knees for simplified control
 
 # --- User Settings ---
-RECORD_VIDEO = True  # Set to True to record the simulation, False to just view it
+RECORD_VIDEO = False  # Set to True to record the simulation, False to just view it
 
 # --- Required Libraries ---
 import mujoco as mj                # Main MuJoCo physics engine for robot simulation
-from mujoco.glfw import glfw       # Graphics library for creating windows and handling input
 from numpy.linalg import inv       # Matrix inverse operations for calculations
 from scipy.spatial.transform import Rotation as R  # Utilities for handling 3D rotations
 import numpy as np                 # Numerical operations and array handling
@@ -53,12 +52,6 @@ fsm_hip = FSM_LEG2_SWING      # Begin with leg 2 in swing phase
 fsm_knee1 = FSM_KNEE1_STANCE  # Begin with leg 1 fully extended
 fsm_knee2 = FSM_KNEE2_STANCE  # Begin with leg 2 fully extended
 
-# --- Mouse/Keyboard Input Variables ---
-button_left = False    # Track left mouse button state
-button_middle = False  # Track middle mouse button state
-button_right = False   # Track right mouse button state
-lastx = 0             # Last mouse X position
-lasty = 0             # Last mouse Y position
 
 def controller(model, data):
     """
@@ -113,7 +106,7 @@ def controller(model, data):
     # Switch from leg 2 swing to leg 1 swing when:
     # 1. Leg 2 is currently swinging
     # 2. Foot 2 is close to ground (height < 0.05)
-    # 3. Leg 1 is leaning forward (angle < 0) to prepare for ground contact
+    # 3. Leg 1 is behind (angle < 0) to prepare for ground contact
     if fsm_hip == FSM_LEG2_SWING and pos_foot2[2] < 0.05 and abs_leg1 < 0.0:
         fsm_hip = FSM_LEG1_SWING  # Begin swinging leg 1
 
@@ -125,7 +118,7 @@ def controller(model, data):
     # --- Leg Length Control State Transitions ---
     
     # Control leg 1 extension/retraction timing
-    # Retract when other leg (leg 2) is down and this leg is leaning forward
+    # Retract when other leg (leg 2) is down and this leg 1 is leaning backwards
     if fsm_knee1 == FSM_KNEE1_STANCE and pos_foot2[2] < 0.05 and abs_leg1 < 0.0:
         fsm_knee1 = FSM_KNEE1_RETRACT  # Start retracting leg 1 (sliding up)
     # Extend when leg has swung back enough (positive angle)
@@ -167,7 +160,7 @@ def init_controller(model, data):
         data: Simulation state data
     """
     data.qpos[4] = 0.5  # Set initial joint position
-    data.ctrl[0] = data.qpos[4]  # Set initial control signal
+    data.ctrl[0] = data.qpos[4]  # Set initial control signal to 0.5
 
 def quat2euler(quat):
     """
@@ -188,84 +181,6 @@ def quat2euler(quat):
     euler = r.as_euler('xyz', degrees=False)
     return euler
 
-def keyboard(window, key, scancode, act, mods):
-    """
-    Keyboard input handler
-    
-    Currently only handles backspace to reset simulation
-    """
-    if act == glfw.PRESS and key == glfw.KEY_BACKSPACE:
-        mj.mj_resetData(model, data)
-        mj.mj_forward(model, data)
-
-def mouse_button(window, button, act, mods):
-    """
-    Mouse button handler
-    
-    Updates button states and mouse position
-    """
-    global button_left, button_middle, button_right
-    button_left = (glfw.get_mouse_button(
-        window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS)
-    button_middle = (glfw.get_mouse_button(
-        window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS)
-    button_right = (glfw.get_mouse_button(
-        window, glfw.MOUSE_BUTTON_RIGHT) == glfw.PRESS)
-
-    glfw.get_cursor_pos(window)
-
-def mouse_move(window, xpos, ypos):
-    """
-    Mouse movement handler
-    
-    Handles camera control based on mouse movement
-    """
-    global lastx, lasty
-    dx = xpos - lastx
-    dy = ypos - lasty
-    lastx = xpos
-    lasty = ypos
-
-    # Return if no buttons pressed
-    if (not button_left) and (not button_middle) and (not button_right):
-        return
-
-    # Get current window size
-    width, height = glfw.get_window_size(window)
-
-    # Get shift key state
-    PRESS_LEFT_SHIFT = glfw.get_key(
-        window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS
-    PRESS_RIGHT_SHIFT = glfw.get_key(
-        window, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS
-    mod_shift = (PRESS_LEFT_SHIFT or PRESS_RIGHT_SHIFT)
-
-    # Determine camera action based on mouse button
-    if button_right:
-        if mod_shift:
-            action = mj.mjtMouse.mjMOUSE_MOVE_H
-        else:
-            action = mj.mjtMouse.mjMOUSE_MOVE_V
-    elif button_left:
-        if mod_shift:
-            action = mj.mjtMouse.mjMOUSE_ROTATE_H
-        else:
-            action = mj.mjtMouse.mjMOUSE_ROTATE_V
-    else:
-        action = mj.mjtMouse.mjMOUSE_ZOOM
-
-    mj.mjv_moveCamera(model, action, dx/height,
-                      dy/height, scene, cam)
-
-def scroll(window, xoffset, yoffset):
-    """
-    Mouse scroll handler
-    
-    Controls camera zoom
-    """
-    action = mj.mjtMouse.mjMOUSE_ZOOM
-    mj.mjv_moveCamera(model, action, 0.0, -0.05 *
-                      yoffset, scene, cam)
 
 # --- Main Simulation Setup ---
 
@@ -277,32 +192,6 @@ xml_path = abspath
 # Initialize MuJoCo data structures
 model = mj.MjModel.from_xml_path(xml_path)  # Load robot model from XML
 data = mj.MjData(model)                # Create data instance for simulation
-cam = mj.MjvCamera()                   # Camera for visualization
-opt = mj.MjvOption()                   # Visualization options
-
-# Initialize GLFW and create window
-glfw.init()
-window = glfw.create_window(1200, 900, "Biped Walking Demo", None, None)
-glfw.make_context_current(window)
-glfw.swap_interval(1)
-
-# Initialize visualization data structures
-mj.mjv_defaultCamera(cam)
-mj.mjv_defaultOption(opt)
-scene = mj.MjvScene(model, maxgeom=10000)
-context = mj.MjrContext(model, mj.mjtFontScale.mjFONTSCALE_150.value)
-
-# Set up input callbacks
-glfw.set_key_callback(window, keyboard)
-glfw.set_cursor_pos_callback(window, mouse_move)
-glfw.set_mouse_button_callback(window, mouse_button)
-glfw.set_scroll_callback(window, scroll)
-
-# Configure camera view
-cam.azimuth = 120.89   # Camera angle around vertical axis
-cam.elevation = -15.81 # Camera angle above horizontal
-cam.distance = 8.0     # Distance from camera to focus point
-cam.lookat = np.array([0.0, 0.0, 2.0])  # Point camera looks at
 
 # Set gravity for walking on slight incline
 model.opt.gravity[0] = 9.81 * np.sin(0.1)  # Small x component for incline
@@ -316,21 +205,35 @@ with mj.viewer.launch_passive(model, data) as viewer:
     # Set up camera view
     viewer.cam.azimuth = 90       # Side view
     viewer.cam.elevation = -20    # Look slightly down
-    viewer.cam.distance = 60.0    # Distance from robot
-    viewer.cam.lookat[:] = [0.0, 0.0, 1.0]  # Look at robot's center
+    viewer.cam.distance = 40.0    # Distance from robot
+    viewer.cam.lookat[:] = [10.0, 0.0, 0.1]  # Look at robot's center
     
     # Set up simulation parameters
     fps = 60  # Frame rate for both viewing and recording
     
     # Initialize video recording if enabled
     if RECORD_VIDEO:
-        # Initialize video recording with higher quality settings
-        width, height = 1920, 1080  # Full HD resolution
-        
-        # Set up video file path
-        video_dir = os.path.dirname(os.path.abspath(__file__))
-        video_path = os.path.join(video_dir, 'Biped_Simulation.avi')
-        print(f"\nVideo will be saved to: {video_path}")
+        try:
+            # Try high quality first
+            width, height = 1920, 1080  # Full HD resolution
+            
+            # Set up video file path
+            video_dir = os.path.dirname(os.path.abspath(__file__))
+            video_path = os.path.join(video_dir, 'Biped_Simulation.avi')
+            print(f"\nVideo will be saved to: {video_path}")
+            
+            # Create renderer for high quality video
+            renderer = mj.Renderer(model, height=height, width=width)
+            
+            # Set initial camera parameters for renderer
+            renderer.update_scene(data, camera=viewer.cam)
+            
+        except ValueError:
+            # Fallback to a lower resolution if high quality fails
+            print("\nFalling back to 1280x720 resolution...")
+            width, height = 1280, 720
+            renderer = mj.Renderer(model, height=height, width=width)
+            renderer.update_scene(data, camera=viewer.cam)
         
         # Use XVID codec which is more widely supported
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -338,33 +241,11 @@ with mj.viewer.launch_passive(model, data) as viewer:
         
         if not out.isOpened():
             raise RuntimeError("Failed to create video writer. Check if you have write permissions in this directory.")
-
-        # Create offscreen renderer with higher resolution
-        context = mj.GLContext(width, height)
-        context.make_current()
         
-        scene = mj.MjvScene(model, maxgeom=10000)
-        cam = mj.MjvCamera()
-        opt = mj.MjvOption()
-        
-        # Set higher quality rendering options
-        opt.flags[mj.mjtVisFlag.mjVIS_STATIC] = 1     # Enable static bodies
-        opt.flags[mj.mjtVisFlag.mjVIS_TEXTURE] = 1    # Enable textures
-        opt.flags[mj.mjtVisFlag.mjVIS_CONTACTPOINT] = 1  # Show contact points
-        
-        viewport = mj.MjrRect(0, 0, width, height)
-        
-        # Create framebuffer and context with higher quality settings
-        framebuffer = mj.MjrContext(model, mj.mjtFontScale.mjFONTSCALE_150.value)
-        
-        print("Recording high-quality simulation... (Move camera with mouse to adjust view)")
+        print("Recording simulation... (Move camera with mouse to adjust view)")
         frames_written = 0  # Counter to track number of frames written
     else:
         print("Running simulation... (Move camera with mouse to adjust view)")
-    
-    print("Left click + drag: Rotate")
-    print("Right click + drag: Pan")
-    print("Scroll: Zoom")
     
     # Variables for timing
     sim_start = time.time()
@@ -381,29 +262,17 @@ with mj.viewer.launch_passive(model, data) as viewer:
             mj.mj_step(model, data)
             controller(model, data)
         
-        # Update visualization and record frame
+        # Update visualization
         if now - last_update >= 1.0/fps:  # Ensure consistent frame rate
-            # Update visualization
             viewer.sync()
             
             if RECORD_VIDEO:
-                # Copy current viewer camera settings to recording camera
-                cam.azimuth = viewer.cam.azimuth
-                cam.elevation = viewer.cam.elevation
-                cam.distance = viewer.cam.distance
-                cam.lookat = viewer.cam.lookat.copy()
+                # Update renderer with current camera view
+                renderer.update_scene(data, camera=viewer.cam)
                 
-                # Render scene and capture frame
-                mj.mjv_updateScene(model, data, opt, None, cam, mj.mjtCatBit.mjCAT_ALL.value, scene)
-                mj.mjr_render(viewport, scene, framebuffer)
-                
-                # Read pixels and write to video with higher quality
-                rgb_img = np.zeros((height, width, 3), dtype=np.uint8)
-                mj.mjr_readPixels(rgb_img, None, viewport, framebuffer)
-                
-                # OpenCV expects BGR format
-                bgr_img = cv2.cvtColor(np.flipud(rgb_img), cv2.COLOR_RGB2BGR)
-                out.write(bgr_img)
+                # Render and save frame
+                pixels = renderer.render()
+                out.write(cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR))
                 frames_written += 1
             
             last_update = now
@@ -414,8 +283,6 @@ with mj.viewer.launch_passive(model, data) as viewer:
         print(f"Frames written: {frames_written}")
         print("Saving high-quality video...")
         out.release()
-        framebuffer.free()
-        context.free()
         
         # Verify the video file was created
         if os.path.exists(video_path):
@@ -423,5 +290,3 @@ with mj.viewer.launch_passive(model, data) as viewer:
             print(f"File size: {os.path.getsize(video_path) / (1024*1024):.1f} MB")
         else:
             print("Warning: Video file was not created successfully!")
-    else:
-        print("Simulation complete")

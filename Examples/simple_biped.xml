@@ -1,0 +1,106 @@
+<?xml version="1.0" ?>
+<!-- MuJoCo XML Model File - Bipedal Robot Simulation -->
+<!-- The root element 'mujoco' defines the entire model -->
+<mujoco model="simple_biped">
+    <!-- Global physics options -->
+    <option gravity="0 0 -9.81" timestep="0.002" integrator="RK4">
+        <!-- Enable contact forces and energy computation -->
+        <flag contact="enable" energy="enable"/>
+    </option>
+
+    <!-- Default properties that apply to all elements unless overridden -->
+    <default>
+        <!-- Moderate joint properties -->
+        <joint type="hinge" damping="10" armature="1" limited="true"/>
+        <!-- Contact properties -->
+        <geom contype="1" conaffinity="1" condim="3" friction="1.5 0.5 0.5" solimp="0.9 0.95 0.001" solref="0.02 1"/>
+        <!-- Default inflatable properties -->
+        <default class="inflatable">
+            <geom type="cylinder" rgba="0.9 0.9 0.9 0.9" friction="1.5 0.1 0.1" 
+                  solimp="0.95 0.99 0.001" solref="0.01 1"/>
+        </default>
+    </default>
+
+    <!-- Visual assets for rendering -->
+    <asset>
+        <!-- Sky background gradient -->
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
+        <!-- Checkered ground texture -->
+        <texture name="plane" type="2d" builtin="checker" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" width="512" height="512"/>
+        <!-- Material using the plane texture -->
+        <material name="plane" texture="plane" texrepeat="1 1" texuniform="true"/>
+    </asset>
+
+    <!-- All physical bodies in the simulation -->
+    <worldbody>
+        <!-- Ground plane -->
+        <geom name="ground" type="plane" size="10 10 0.1" material="plane" friction="1.5 0.5 0.5"/>
+        <!-- Light source for visualization -->
+        <light pos="0 0 3" dir="0 0 -1" diffuse="0.5 0.5 0.5"/>
+
+        <!-- Main robot body (torso) -->
+        <body name="torso" pos="0 0 0.75">
+            <!-- Root joints - only allow x/y motion and rotation -->
+            <joint name="root_x" type="slide" axis="1 0 0" pos="0 0 0" range="-10 10"/>
+            <joint name="root_y" type="slide" axis="0 1 0" pos="0 0 0" range="-1 1"/>
+            <joint name="root_rx" type="hinge" axis="1 0 0" pos="0 0 0" range="-10 10" damping="20"/>
+            <joint name="root_ry" type="hinge" axis="0 1 0" pos="0 0 0" range="-10 10" damping="20"/>
+            <joint name="root_rz" type="hinge" axis="0 0 1" pos="0 0 0" range="-10 10" damping="20"/>
+            
+            <!-- Electronics platform -->
+            <geom name="torso" type="box" size="0.2 0.15 0.02" rgba="0.3 0.3 0.3 1" mass="1.5"/>
+
+            <!-- Left leg assembly - positioned more underneath -->
+            <body name="left_thigh" pos="0.1 0.12 0">
+                <!-- Hip joint - increased range -->
+                <joint name="left_hip" axis="0 1 0" range="-20 120" damping="10"/>
+                <!-- Thigh segment -->
+                <geom name="left_thigh" class="inflatable" size="0.05 0.2" pos="0 0 -0.2" mass="0.4"/>
+                
+                <body name="left_shin" pos="0 0 -0.4">
+                    <!-- Knee joint - increased range -->
+                    <joint name="left_knee" axis="0 1 0" range="-120 0" damping="10"/>
+                    <!-- Shin segment -->
+                    <geom name="left_shin" class="inflatable" size="0.05 0.2" pos="0 0 -0.2" mass="0.4"/>
+                    
+                    <!-- Foot -->
+                    <body name="left_foot" pos="0 0 -0.4">
+                        <!-- Hemisphere foot -->
+                        <geom name="left_foot" type="sphere" size="0.05" rgba="0.9 0.9 0.9 0.9" mass="0.2"
+                              friction="2.0 0.1 0.1" solimp="0.95 0.99 0.001" solref="0.01 1"/>
+                    </body>
+                </body>
+            </body>
+
+            <!-- Right leg assembly - positioned more underneath -->
+            <body name="right_thigh" pos="-0.1 -0.12 0">
+                <!-- Hip joint - increased range -->
+                <joint name="right_hip" axis="0 1 0" range="-20 120" damping="10"/>
+                <!-- Thigh segment -->
+                <geom name="right_thigh" class="inflatable" size="0.05 0.2" pos="0 0 -0.2" mass="0.4"/>
+                
+                <body name="right_shin" pos="0 0 -0.4">
+                    <!-- Knee joint - increased range -->
+                    <joint name="right_knee" axis="0 1 0" range="-120 0" damping="10"/>
+                    <!-- Shin segment -->
+                    <geom name="right_shin" class="inflatable" size="0.05 0.2" pos="0 0 -0.2" mass="0.4"/>
+                    
+                    <!-- Foot -->
+                    <body name="right_foot" pos="0 0 -0.4">
+                        <!-- Hemisphere foot -->
+                        <geom name="right_foot" type="sphere" size="0.05" rgba="0.9 0.9 0.9 0.9" mass="0.2"
+                              friction="2.0 0.1 0.1" solimp="0.95 0.99 0.001" solref="0.01 1"/>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+
+    <!-- Position servos with higher gains -->
+    <actuator>
+        <position name="left_hip_pos" joint="left_hip" kp="200" kv="50"/>
+        <position name="left_knee_pos" joint="left_knee" kp="200" kv="50"/>
+        <position name="right_hip_pos" joint="right_hip" kp="200" kv="50"/>
+        <position name="right_knee_pos" joint="right_knee" kp="200" kv="50"/>
+    </actuator>
+</mujoco> 

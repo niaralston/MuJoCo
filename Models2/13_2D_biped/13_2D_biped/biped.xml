@@ -1,7 +1,8 @@
 <mujoco>
 
 	<visual>
-			<headlight ambient="0.25 0.25 0.25"/>
+		<global offwidth="3840" offheight="2160"/>
+		<headlight ambient="0.25 0.25 0.25"/>
 	</visual>
 
 	<option timestep="0.001" integrator="RK4" gravity="0 0 0">
