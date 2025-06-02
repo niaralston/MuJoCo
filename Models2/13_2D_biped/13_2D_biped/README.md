@@ -11,16 +11,20 @@
 | data.actuator | Actuator states | [nu] | Contains actuator lengths and velocities |
 
 Special indices for our biped:
+
 Body indices:
-1: First leg
-2: First foot
-3: Second leg
-4: Second foot
+- 1: First leg
+- 2: First foot  
+- 3: Second leg
+- 4: Second foot
+
 Control indices:
-0: Hip joint torque
-2: Leg 1 extension
-4: Leg 2 extension
+- 0: Hip joint torque
+- 2: Leg 1 extension
+- 4: Leg 2 extension
+
 Important derived values:
-abs_leg1 = -euler_leg1[1]: Absolute angle of leg 1 (negative pitch)
-Positive: leg leans backward (ready to push)
-Negative: leg leans forward (ready to catch)
+
+- abs_leg1 = -euler_leg1[1]: Absolute angle of leg 1 (negative pitch)
+  - Positive: leg leans backward (ready to push)
+  - Negative: leg leans forward (ready to catch)
