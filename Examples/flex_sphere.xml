@@ -13,23 +13,68 @@
      limitations under the License.
 -->
 
+<!-- 
+This MuJoCo model creates a basic deformable sphere using flex components.
+Unlike the radial or trilinear models, this one uses a simpler approach with
+just edge-based connections between particles.
+
+Key concepts:
+- Uses a basic flex component without specialized deformation methods
+- Demonstrates the simplest way to create a deformable object
+- Shape maintained purely through edge connections between particles
+-->
+
 <mujoco model="Full-flex sphere">
+  <!-- Include standard scene settings from an external file -->
   <include file="scene.xml"/>
 
+  <!-- Simulation parameters:
+       - Using Conjugate Gradient (CG) solver for physics calculations
+       - High precision tolerance for stable behavior
+       - Small timestep for numerical stability
+       - Fast implicit integration for better performance
+  -->
   <option solver="CG" tolerance="1e-6" timestep=".001" integrator="implicitfast"/>
 
+  <!-- Allocate 10MB of memory for the simulation -->
   <size memory="10M"/>
 
   <visual>
+    <!-- Force Visualization Control:
+         - Press 'F' key in viewer to show force arrows
+         - stiffness=500 controls arrow size scaling:
+           * Higher value (e.g. 500) = shorter arrows
+           * Lower value (e.g. 100) = longer arrows
+         - This is just a visualization setting, doesn't affect physics
+         - All forces are shown regardless of magnitude, just scaled differently
+    -->
     <map stiffness="500"/>
   </visual>
 
   <worldbody>
+    <!-- Create two static box obstacles in the environment:
+         1. A raised platform/wall on the right side
+         2. An inclined platform at the center
+    -->
     <geom type="box" pos="1.5 0 0.25" size=".5 2 .25"/>
     <geom type="box" pos="0 0 0.25" size="2 2 .05" euler="0 15 0"/>
+
+    <!-- Deformable sphere configuration:
+         - Creates an 8x8x8 grid of particles
+         - Particles spaced 0.07 units apart
+         - Small particle radius (0.001) for better visual appearance
+         - Cyan color (0 .7 .7 1)
+         - Total mass of 5 units distributed across particles
+         - Named "slow" due to its movement characteristics
+    -->
     <flexcomp type="ellipsoid" count="8 8 8" spacing=".07 .07 .07" pos="-.5 0 1" dim="3"
               radius=".001" rgba="0 .7 .7 1" mass="5" name="slow">
+      <!-- Edge settings:
+           - equality="true" makes edges try to maintain their initial lengths
+           - This creates a more rigid, structured deformation behavior
+      -->
       <edge equality="true"/>
+      <!-- Disable self-collision and internal forces since shape is maintained by edge connections -->
       <contact selfcollide="none" internal="false"/>
     </flexcomp>
   </worldbody>

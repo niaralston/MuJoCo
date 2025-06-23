@@ -13,29 +13,67 @@
      limitations under the License.
 -->
 
+<!-- 
+  Main MuJoCo scene configuration file
+  This file defines the environment, visual properties, assets, and physical elements of the simulation
+-->
 <mujoco>
+  <!-- Define directories where mesh and texture assets can be found -->
   <compiler meshdir="asset" texturedir="asset"/>
 
+  <!-- Set the mean size of moving bodies for auto-computation of visualization parameters -->
   <statistic meansize=".05"/>
 
+  <!-- Visual rendering settings for the scene -->
   <visual>
+    <!-- Define haze color in RGBA format (light blue-grey haze) -->
     <rgba haze="0.15 0.25 0.35 1"/>
+    <!-- Set shadow map resolution to 4096x4096 pixels for high quality shadows -->
     <quality shadowsize="4096"/>
+    <!-- Configure various visual mapping parameters:
+         - stiffness: controls the stiffness of camera movements
+         - shadowscale: adjusts the size/intensity of shadows
+         - fogstart/fogend: distance where fog effects begin and end
+         - zfar: maximum rendering distance
+         - haze: enables atmospheric haze effect -->
     <map stiffness="700" shadowscale="0.5" fogstart="1" fogend="15" zfar="40" haze="1"/>
   </visual>
 
+  <!-- Define visual assets used in the scene -->
   <asset>
+    <!-- Create a skybox using a gradient texture from blue-grey to black -->
     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
+    
+    <!-- Create a checker pattern texture for the ground plane:
+         - type="2d": 2D texture
+         - builtin="checker": uses built-in checker pattern
+         - rgb1/rgb2: defines the two colors used in the checker pattern
+         - mark="cross": adds cross marks to the texture
+         - markrgb: color of the cross marks -->
     <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2"
       width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
 
+    <!-- Define a material using the checker texture:
+         - reflectance: how much light the material reflects
+         - texrepeat: how many times the texture repeats across the surface
+         - texuniform: whether texture coordinates are computed in local or global space -->
     <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="10 10" texuniform="true"/>
   </asset>
 
+  <!-- Define physical elements in the world -->
   <worldbody>
+    <!-- Add two light sources for illumination:
+         1. An ambient fill light (first light)
+         2. A directional key light (second light) -->
     <light diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 2.0" dir="0 0 -1" castshadow="false"/>
     <light directional="true" diffuse=".8 .8 .8" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1"/>
 
+    <!-- Create an infinite ground plane:
+         - type="plane": infinite plane geometry
+         - size: plane dimensions (0 0 1 means infinite in x and y)
+         - pos: position in 3D space
+         - quat: rotation quaternion (1 0 0 0 means no rotation)
+         - condim="1": constraint dimension (1 = frictionless contact) -->
     <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1"/>
   </worldbody>
 </mujoco>

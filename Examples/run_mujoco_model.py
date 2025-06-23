@@ -3,12 +3,35 @@ import mujoco.viewer
 import time
 import os
 import sys
+import cv2  # For video recording
+from pathlib import Path
+
+# --- User Settings ---
+RECORD_VIDEO = False  # Set to True to record the simulation, False to just view it
+TARGET_FPS = 15     # Even lower FPS for guaranteed smooth playback
+PLAYBACK_SPEED = 0.5  # Slow motion for better visualization
+
+def get_videos_dir():
+    """Create and return a directory for saving videos"""
+    # Try to use Documents folder first
+    try:
+        documents_dir = os.path.expanduser('~/Documents')
+        videos_dir = os.path.join(documents_dir, 'MuJoCo_Videos')
+    except:
+        # Fallback to current directory
+        videos_dir = os.path.join(os.getcwd(), 'videos')
+    
+    # Create directory if it doesn't exist
+    os.makedirs(videos_dir, exist_ok=True)
+    return videos_dir
 
 def main():
+    global RECORD_VIDEO  # Declare RECORD_VIDEO as global
+    
     print(f"MuJoCo version: {mujoco.__version__}")
     print(f"Python version: {sys.version}")
     
-    # Look for XML files in both current directory and Examples subdirectory
+    # Look for XML files in current directory, Examples subdirectory, and Models2/Deepmind directory
     xml_files = []
     
     # Check current directory
@@ -22,9 +45,16 @@ def main():
         examples_files = [os.path.join('Examples', f) for f in os.listdir(examples_dir) if f.endswith('.xml')]
         for file in examples_files:
             xml_files.append(file)
+            
+    # Check Models2/Deepmind directory if it exists
+    deepmind_dir = os.path.join('.', 'Models2', 'Deepmind')
+    if os.path.exists(deepmind_dir) and os.path.isdir(deepmind_dir):
+        deepmind_files = [os.path.join('Models2/Deepmind', f) for f in os.listdir(deepmind_dir) if f.endswith('.xml')]
+        for file in deepmind_files:
+            xml_files.append(file)
     
     if not xml_files:
-        print("No XML files found in the current directory or Examples subdirectory!")
+        print("No XML files found in the current directory, Examples subdirectory, or Models2/Deepmind directory!")
         return
     
     # Display available XML files with numbers
@@ -130,20 +160,78 @@ def main():
             # Set camera to a reasonable distance
             viewer.cam.distance = 5.0
             
-            start_time = time.time()
+            # Set up simulation parameters
+            fps = 30
+            timestep = model.opt.timestep
+            steps_per_frame = int(1.0 / (fps * timestep))
             
-            while viewer.is_running() and (time.time() - start_time) < sim_time:
-                # Step the simulation
-                mujoco.mj_step(model, data)
+            # Video recording setup
+            renderer = None
+            if RECORD_VIDEO:
+                # Use a resolution that works with default framebuffer
+                width, height = 640, 480
                 
-                # Update the viewer
+                # Get the base name of the XML file without extension
+                base_name = os.path.splitext(os.path.basename(model_path))[0]
+                video_filename = f'{base_name}.avi'
+                
+                # Set up video file path
+                video_dir = os.path.dirname(os.path.abspath(__file__))
+                video_path = os.path.join(video_dir, video_filename)
+                print(f"\nVideo will be saved to: {video_path}")
+                
+                # Create renderer for video
+                renderer = mujoco.Renderer(model, height=height, width=width)
+                renderer.update_scene(data, camera=viewer.cam)
+                
+                # Use XVID codec which is more widely supported
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                out = cv2.VideoWriter(video_path, fourcc, fps, (width, height), isColor=True)
+                
+                if not out.isOpened():
+                    raise RuntimeError("Failed to create video writer. Check if you have write permissions in this directory.")
+                
+                print("Recording simulation... (Move camera with mouse to adjust view)")
+                frames_written = 0
+            
+            print("\nRunning simulation...")
+            step_count = 0
+            
+            while viewer.is_running() and data.time < sim_time:
+                # Run fixed number of steps
+                for _ in range(steps_per_frame):
+                    mujoco.mj_step(model, data)
+                    step_count += 1
+                
+                # Update viewer and record frame
                 viewer.sync()
                 
-                # Print step info occasionally
-                step_count = int(data.time / model.opt.timestep)
-                if step_count % 1000 == 0:
-                    elapsed = time.time() - start_time
-                    print(f"Simulation time: {data.time:.2f}s, Real time: {elapsed:.2f}s")
+                if RECORD_VIDEO and renderer:
+                    renderer.update_scene(data, camera=viewer.cam)
+                    pixels = renderer.render()
+                    out.write(cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR))
+                    frames_written += 1
+                
+                # Print progress occasionally
+                if step_count % (fps * 10) == 0:  # Every 10 seconds
+                    print(f"Simulation time: {data.time:.2f}s / {sim_time:.2f}s")
+                
+                # Small sleep to keep the simulation visible
+                time.sleep(0.01)
+            
+            # Clean up
+            print(f"\nSimulation finished. Simulation time: {data.time:.2f} seconds")
+            if RECORD_VIDEO:
+                print(f"Frames written: {frames_written}")
+                print("Saving video...")
+                out.release()
+                
+                # Verify the video file was created
+                if os.path.exists(video_path):
+                    print(f"Video saved successfully to: {video_path}")
+                    print(f"File size: {os.path.getsize(video_path) / (1024*1024):.1f} MB")
+                else:
+                    print("Warning: Video file was not created successfully!")
         
         print("\n✅ Simulation completed successfully!")
         

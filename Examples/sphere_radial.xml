@@ -13,27 +13,101 @@
      limitations under the License.
 -->
 
+<!-- 
+This MuJoCo model simulates a deformable sphere using radial flex components.
+The sphere can interact with its environment and deform based on physical forces.
+
+Key concepts:
+- Instead of using a single deformable sphere, this simulation uses a grid of particles (8x8x8)
+  to achieve more realistic and complex deformations
+- The particles are connected by edges with specific properties that control how they interact
+- The simulation includes both visual markers and the actual deformable structure
+-->
+
 <mujoco model="Radial flex sphere">
+  <!-- Include standard scene settings from an external file -->
   <include file="scene.xml"/>
 
+  <!-- Simulation parameters:
+       - Using Conjugate Gradient (CG) solver for physics calculations
+       - High precision tolerance of 1e-6
+       - Small timestep of 0.001s for stable simulation
+       - Using fast implicit integration for better performance
+  -->
   <option solver="CG" tolerance="1e-6" timestep=".001" integrator="implicitfast"/>
 
+  <!-- Allocate 10MB of memory for the simulation -->
   <size memory="10M"/>
 
+  <!-- Visual settings for the simulation:
+       - Map stiffness controls how force vectors are displayed
+  -->
   <visual>
     <map stiffness="500"/>
   </visual>
 
   <worldbody>
+    <!-- Create two static box obstacles in the environment:
+         1. A raised platform/wall on the right side
+         2. An inclined platform at the center
+    -->
     <geom type="box" pos="1.5 0 0.25" size=".5 2 .25"/>
     <geom type="box" pos="0 0 0.25" size="2 2 .05" euler="0 15 0"/>
+
+    <!-- Main body containing the deformable sphere:
+         - Positioned slightly left and above the ground
+         - Has a free joint allowing full 6-DOF motion
+    -->
     <body name="body" pos="-.5 0 1">
       <freejoint/>
+      <!-- Optional visual marker:
+           - Creates a small sphere at the body's center point
+           - Pure visualization (contype/conaffinity=0 means no collision)
+           - Group 4 is commonly used for visual reference markers
+           - This marker is not required for simulation, only helps visualize the body's center
+      -->
       <geom size=".1" contype="0" conaffinity="0" group="4"/>
+
+      <!-- Flexible component defining the deformable sphere:
+           Why use multiple particles instead of one sphere?
+           - Creates an 8x8x8 grid (512 particles) for more realistic deformation
+           - Allows complex behaviors like localized squishing and stretching
+           - Each particle can move semi-independently while staying connected
+           - More accurate physics simulation than a single deformable unit
+           
+           Parameters explained:
+           - type="ellipsoid": Creates particles in an ellipsoid shape
+           - count="8 8 8": Creates 8x8x8 grid of particles (512 total)
+           - spacing=".07 .07 .07": Distance between particles
+           - radius=".001": Size of each individual particle
+           - rgba="0 .7 .7 1": Cyan color for visualization
+           - mass="5": Total mass distributed across all particles
+      -->
       <flexcomp type="ellipsoid" count="8 8 8" spacing=".07 .07 .07" dim="3"
                 radius=".001" rgba="0 .7 .7 1" mass="5" name="radial" dof="radial">
+        <!-- Edge properties controlling how particles connect and interact:
+             - equality="true": Makes edges try to maintain equal lengths for uniform deformation
+             - solimp="0 0.9 0.01": Solver impedance parameters
+               * 0: No damping
+               * 0.9: High restitution (bouncy)
+               * 0.01: Small force-dependent slip
+             - solref=".02 1": Solver reference parameters
+               * .02: Time constant (affects stiffness)
+               * 1: Damping ratio
+             
+             These parameters together control how "stretchy" and "springy" the sphere is,
+             and how it maintains its shape during and after deformation.
+        -->
         <edge equality="true" solimp="0 0.9 0.01" solref=".02 1"/>
-        <!-- <elasticity young="6e2" poisson="0.3" damping="0.05"/> -->
+        <!-- Commented out elastic properties
+        <elasticity young="6e2" poisson="0.3" damping="0.05"/> -->
+        
+        <!-- Contact settings for particle interactions:
+             - selfcollide="none": Prevents particles from colliding with other particles in the sphere
+               (like marbles in a bag not bumping into each other)
+             - internal="false": Disables internal contact force calculations within the sphere
+               (we don't need to calculate pressure forces inside the structure)
+             Both settings are off since particle relationships are handled by edge connections -->
         <contact selfcollide="none" internal="false"/>
       </flexcomp>
     </body>

@@ -1,0 +1,120 @@
+<mujoco model="Humanoid">
+  
+  
+  <compiler angle="degree" inertiafromgeom="true" coordinate="local" />
+  
+  <option timestep="0.005" />
+
+  
+  <visual>
+    
+    <map znear="0.1" zfar="2000" />
+    
+    <rgba haze="0.15 0.25 0.35 1" />
+    
+    <quality shadowsize="4096" />
+    
+    <global offwidth="2560" offheight="1440" elevation="-20" azimuth="120" />
+    
+    <scale forcewidth="0.1" contactwidth="0.1" contactheight="0.1" connect="0.1" com="0.1" />
+  </visual>
+
+  
+  <statistic extent="50" center="0 0 1" />
+
+  
+  <asset>
+    
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512" />
+    
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8" />
+    
+    <material name="floor" texture="texplane" texuniform="true" />
+    <material name="body" rgba="1 1 1 1" />
+  </asset>
+
+  
+  <default>
+    
+    <joint armature="1" damping="5" limited="true" />
+    
+    <geom conaffinity="1" condim="3" contype="1" margin="0.001" rgba="1 1 1 1" material="body" />
+    
+    <motor ctrllimited="true" ctrlrange="-1 1" />
+  </default>
+
+  
+  <worldbody>
+    
+    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1" />
+    
+    <geom name="floor" pos="0 0 0" size="50 50 .125" type="plane" material="floor" condim="3" />
+    
+    
+    <body name="torso" pos="0 0 1.0">
+      
+      <freejoint name="root" />
+      
+      <geom name="torso" type="capsule" fromto="0 -.21 0 0 .21 0" size="0.07" mass="10" rgba="1 1 1 1" />
+      
+      <camera name="track" mode="fixed" pos="0 -15 5" zaxis="0 0 1" />
+      
+      
+      <body name="pelvis" pos="0 0 -0.165">
+        
+        <geom name="pelvis" type="box" size="0.08 0.175 0.036" mass="8" rgba="1 1 1 1" />
+        
+        
+        <body name="thigh_right" pos="0 -0.3 -0.04">
+          
+          <joint name="hip_x_right" axis="1 0 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          <joint name="hip_z_right" axis="0 0 1" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          <joint name="hip_y_right" axis="0 1 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          
+          <geom name="thigh_right" type="cylinder" fromto="0 0 0 0 0.01 -0.34" size="0.18" mass="4.5" rgba="1 1 1 1" />
+          
+          
+          <body name="shin_right" pos="0 0.01 -0.403">
+            
+            <joint name="knee_right" pos="0 0 .02" axis="0 -1 0" range="-180 180" stiffness="1000" damping="100" />
+            
+            <geom name="shin_right" type="cylinder" fromto="0 0 0 0 0 -0.35" size="0.147" mass="3" rgba="1 1 1 1" friction="1 0.2 0.0001" />
+          </body>
+        </body>
+
+        
+        <body name="thigh_left" pos="0 0.3 -0.04">
+          
+          <joint name="hip_x_left" axis="-1 0 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          <joint name="hip_z_left" axis="0 0 -1" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          <joint name="hip_y_left" axis="0 1 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100" />
+          
+          <geom name="thigh_left" type="cylinder" fromto="0 0 0 0 -0.01 -0.34" size="0.18" mass="4.5" rgba="1 1 1 1" />
+          
+          
+          <body name="shin_left" pos="0 -0.01 -0.403">
+            
+            <joint name="knee_left" pos="0 0 .02" axis="0 -1 0" range="-180 180" stiffness="1000" damping="100" />
+            
+            <geom name="shin_left" type="cylinder" fromto="0 0 0 0 0 -0.35" size="0.147" mass="3" rgba="1 1 1 1" friction="1 0.2 0.0001" />
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  
+  <actuator>
+    
+    <position name="hip_x_right" joint="hip_x_right" kp="19.6" ctrlrange="-180 180" />
+    <position name="hip_z_right" joint="hip_z_right" kp="19.6" ctrlrange="-180 180" />
+    <position name="hip_y_right" joint="hip_y_right" kp="19.6" ctrlrange="-180 180" />
+    <position name="knee_right" joint="knee_right" kp="20.2" ctrlrange="-180 180" />
+    
+    
+    <position name="hip_x_left" joint="hip_x_left" kp="19.6" ctrlrange="-180 180" />
+    <position name="hip_z_left" joint="hip_z_left" kp="19.6" ctrlrange="-180 180" />
+    <position name="hip_y_left" joint="hip_y_left" kp="19.6" ctrlrange="-180 180" />
+    <position name="knee_left" joint="knee_left" kp="20.2" ctrlrange="-180 180" />
+  </actuator>
+</mujoco>

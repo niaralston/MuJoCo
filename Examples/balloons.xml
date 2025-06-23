@@ -13,27 +13,39 @@
      limitations under the License.
 -->
 
+<!-- This is a MuJoCo physics simulation that models a system of helium balloons tied to a weight -->
 <mujoco>
+  <!-- Global physics parameters:
+       - density: Air density in kg/m³
+       - viscosity: Air viscosity for fluid dynamics
+       - integrator: Using implicit integration for stable simulation -->
   <option density="1.204" viscosity="1.8e-5" integrator="implicit"/>
 
+  <!-- Camera settings - slightly tilted down view -->
   <visual>
     <global elevation="-10"/>
   </visual>
 
+  <!-- Default properties for simulation elements -->
   <default>
+    <!-- Strings/ropes connecting balloons to weight -->
     <tendon limited="true" width="0.003" rgba="1 1 1 1"/>
+    <!-- General friction coefficient for all geometries -->
     <geom friction=".2"/>
+    
+    <!-- Properties for the weight object -->
     <default class="weight">
       <geom rgba=".8 .4 .8 1"/>
       <site rgba=".8 .4 .8 1"/>
     </default>
+
+    <!-- Properties for all balloons -->
     <default class="balloon">
-      <!--
-        0.167 is the MKS density of helium at room temperature.
-        Note this does not take into account the mass of the rubber,
-        which is likely not insignificant.
-      -->
+      <!-- Helium density at room temperature (0.167 kg/m³) -->
+      <!-- The ellipsoid shape enables fluid dynamics calculations -->
       <geom density="0.167" fluidshape="ellipsoid"/>
+      
+      <!-- Color definitions for different balloons -->
       <default class="pink">
         <geom rgba="1 .6 .7 1"/>
         <site rgba="1 .6 .7 1"/>
@@ -48,31 +60,44 @@
       </default>
       <default class="orange">
         <geom rgba="1 .4 0 1"/>
-        <site rgba="1 .4 0 1"/>
+        <site rgba="1 .4 0 1"/> <!-- setting attachment point color to orange-->
       </default>
     </default>
   </default>
 
+  <!-- Visual assets for the environment -->
   <asset>
+    <!-- Checkerboard texture for the ground -->
     <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb2="0 0 0" rgb1="1 1 1"/>
     <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance=".6"/>
   </asset>
 
+  <!-- Physical objects in the world -->
   <worldbody>
+    <!-- Ground plane with checkerboard pattern -->
     <geom name="ground" type="plane" size="5 5 .05" pos="0 0 -.5" material="grid"/>
+    <!-- Angled ramp on the ground -->
     <geom name="ramp" type="box" size=".4 .2 .03" pos="0 0 -.4" euler="0 20 0" rgba="1 1 1 1"/>
 
+    <!-- Weight object that balloons are tied to -->
     <body name="weight" childclass="weight" pos=".3 0 .2">
       <freejoint/>
+      <!-- Lights to track the weight's center of mass -->
       <light pos="1 0 3" dir="-1 0 -3" mode="trackcom"/>
       <light pos="-1 0 3" dir="1 0 -3" mode="trackcom"/>
-      <!-- The mass of the weight was chosen to be slightly bigger than the total buoyancy of the balloons. -->
+      <!-- Weight mass carefully chosen to be slightly more than total balloon buoyancy -->
       <geom name="weight" type="box" size=".015 .015 .015" mass=".0347"/>
+      <!-- Attachment points for balloon strings -->
       <site name="weight1" pos=" .013  .013 .013" size="0.005"/>
       <site name="weight2" pos="-.013 -.013 .013" size="0.005"/>
     </body>
 
-    <!-- The gravcomp value of 7.2 is the ratio of air and helium densities at room temperature. -->
+    <!-- Balloon bodies - each with:
+         - gravcomp="7.2": compensation for buoyancy (air/helium density ratio)
+         - freejoint: allows full 6-DOF motion
+         - ellipsoid: main balloon shape
+         - knot: visual detail at bottom
+         - site: attachment point for string -->
     <body name="pink" gravcomp="7.2" pos="-.2 .1 .2" childclass="pink">
       <freejoint />
       <geom name="pink" type="ellipsoid" size=".11 .11 .15"/>
@@ -102,10 +127,15 @@
     </body>
   </worldbody>
 
+  <!-- Tendon section defines the strings connecting balloons to weight -->
   <tendon>
-    <spatial range="0 0.6">
-      <site site="pink"/>
-      <site site="weight1"/>
+    <!-- Each spatial tendon:
+         - Connects a balloon to one of the weight attachment points
+         - Has a range defining min/max length of string
+         - Creates realistic string-like behavior -->
+    <spatial range="0 0.6"> <!-- range defines the min/max length of the string -->
+      <site site="pink"/> <!-- site is the attachment point for the string -->
+      <site site="weight1"/> <!-- weight1 is the attachment point for the string -->
     </spatial>
     <spatial range="0 0.4">
       <site site="blue"/>
