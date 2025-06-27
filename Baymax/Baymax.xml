@@ -4,6 +4,35 @@
   <!-- Basic settings for how angles are measured and physics are calculated -->
   <!-- calculating intertia from the geometry of the body parts-->
   <compiler angle="degree" inertiafromgeom="true" coordinate="local"/>
+  
+  <!-- Default settings for all joints and body parts -->
+  <default>
+    <!-- Joint settings: how stiff and damped the joints are, and that the joints are limited in degrees -->
+    <joint armature="1" damping="5" limited="true"/>
+    <!-- Physical properties for all geometric shapes (body parts) -->
+    <geom conaffinity="1" condim="3" contype="1" margin="0.001" rgba="1 1 1 1" material="body"/>
+    <!-- Motor settings with default kp value -->
+    <motor ctrllimited="true" ctrlrange="-1 1"/>
+    
+    <!-- Default position controller (fallback) -->
+    <position kp="35"/>
+    
+    <!-- Knee-specific position controller -->
+    <default class="knee_position">
+      <position kp="35"/>
+    </default>
+    
+    <!-- Hip-specific position controller -->
+    <default class="hip_position">
+      <position kp="35"/>
+    </default>
+    
+    <!-- Joint stiffness class for specific joint settings -->
+    <default class="joint_stiffness">
+      <joint stiffness="1000" damping="200"/>  <!-- Default values for all joints -->
+    </default>
+  </default>
+
   <!-- Sets how often the physics simulation updates (every 0.005 seconds) -->
   <option timestep="0.005"/>
 
@@ -40,24 +69,6 @@
     <material name="body" rgba="1 1 1 1"/>
   </asset>
 
-  <!-- Default settings for all joints and body parts -->
-  <default>
-    <!-- Joint settings: how stiff and damped the joints are, and that the joints are limited in degrees -->
-    <joint armature="1" damping="5" limited="true"/>
-    <!-- Physical properties for all geometric shapes (body parts):
-         - conaffinity="1" and contype="1": Enables collision detection between body parts
-         - condim="3": Enables normal forces and friction in both surface directions
-         - margin="0.001": Creates a small collision buffer for stable physics
-         - rgba="1 1 1 1": Sets color to white (red=1, green=1, blue=1, alpha=1)
-         - material="body": Uses the "body" material defined in assets -->
-    <geom conaffinity="1" condim="3" contype="1" margin="0.001" rgba="1 1 1 1" material="body"/>
-    <!-- Motor settings for joint control:
-         - ctrllimited="true": Enables limits on how much power the motors can apply
-         - ctrlrange="-1 1": Sets the control range from -100% to +100% power
-         This prevents motors from applying infinite force and makes the simulation more realistic -->
-    <motor ctrllimited="true" ctrlrange="-1 1"/>
-  </default>
-
   <!-- The main body of the robot and the world -->
   <worldbody>
     <!-- Adds a light source -->
@@ -67,6 +78,8 @@
     
     <!-- Site for overall COM visualization -->
     <site name="overall_com" pos="0 0 1" size="0.04" rgba="1 0 0 1" type="sphere"/>
+    <!-- Site for ZMP visualization -->
+    <site name="zmp" pos="0 0 0.001" size="0.04" rgba="0 1 0 1" type="sphere"/>
     
     <!-- Main torso of the robot (unified body) -->
     <body name="torso" pos="0 0 1.0">
@@ -84,21 +97,19 @@
       <!-- Right leg assembly -->
       <!-- postion is relative to the parent body -->
       <body name="thigh_right" pos="0 -0.3 -0.04">
-        <!-- Hip joints for right leg (3 degrees of freedom)
+        <!-- Hip joints for right leg (2 degrees of freedom)
              Original biomechanical ranges were:
              - hip_x: -25° to 5° (side-to-side movement)
-             - hip_z: -60° to 35° (rotation)
              - hip_y: -110° to 20° (forward/back movement) -->
-        <joint name="hip_x_right" axis="1 0 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
-        <joint name="hip_z_right" axis="0 0 1" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
-        <joint name="hip_y_right" axis="0 1 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
+        <joint name="hip_x_right" axis="1 0 0" range="-180 180" pos="0 0 0" class="joint_stiffness"/>
+        <joint name="hip_y_right" axis="0 1 0" range="-180 180" pos="0 0 0" class="joint_stiffness"/>
         <!-- Right thigh geometry -->
         <geom name="thigh_right" type="capsule" fromto="0 0 0 0 0.01 -0.34" size="0.25" mass="4.5" rgba="1 1 1 1" friction="1.0 0.1 0.01"/>
         
         <!-- Right shin (lower leg) -->
         <body name="shin_right" pos="0 0.01 -0.403">
           <!-- Knee joint (originally -160° to 2°) -->
-          <joint name="knee_right" pos="0 0 .02" axis="0 -1 0" range="-180 180" stiffness="1000" damping="100"/>
+          <joint name="knee_right" pos="0 0 .02" axis="0 -1 0" range="-180 180" class="joint_stiffness"/>
           <!-- Right shin geometry -->
           <geom name="shin_right" type="capsule" fromto="0 0 0 0 0 -0.35" size="0.25" mass="2.5" rgba="1 1 1 1" friction="1.0 0.1 0.01" condim="6"/>
         </body>
@@ -106,21 +117,19 @@
 
       <!-- Left leg assembly (mirror of right leg) -->
       <body name="thigh_left" pos="0 0.3 -0.04">
-        <!-- Hip joints for left leg (3 degrees of freedom)
+        <!-- Hip joints for left leg (2 degrees of freedom)
              Original biomechanical ranges were:
              - hip_x: -25° to 5° (side-to-side movement)
-             - hip_z: -60° to 35° (rotation)
              - hip_y: -110° to 20° (forward/back movement) -->
-        <joint name="hip_x_left" axis="-1 0 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
-        <joint name="hip_z_left" axis="0 0 -1" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
-        <joint name="hip_y_left" axis="0 1 0" range="-180 180" pos="0 0 0" stiffness="1000" damping="100"/>
+        <joint name="hip_x_left" axis="-1 0 0" range="-180 180" pos="0 0 0" class="joint_stiffness"/>
+        <joint name="hip_y_left" axis="0 1 0" range="-180 180" pos="0 0 0" class="joint_stiffness"/>
         <!-- Left thigh geometry -->
         <geom name="thigh_left" type="capsule" fromto="0 0 0 0 -0.01 -0.34" size="0.25" mass="4.5" rgba="1 1 1 1" friction="1.0 0.1 0.01"/>
         
         <!-- Left shin (lower leg) -->
         <body name="shin_left" pos="0 -0.01 -0.403">
           <!-- Knee joint (originally -160° to 2°) -->
-          <joint name="knee_left" pos="0 0 .02" axis="0 -1 0" range="-180 180" stiffness="1000" damping="100"/>
+          <joint name="knee_left" pos="0 0 .02" axis="0 -1 0" range="-180 180" class="joint_stiffness"/>
           <!-- Left shin geometry -->
           <geom name="shin_left" type="capsule" fromto="0 0 0 0 0 -0.35" size="0.25" mass="2.5" rgba="1 1 1 1" friction="1.0 0.1 0.01" condim="6"/>
         </body>
@@ -128,20 +137,24 @@
     </body>
   </worldbody>
 
-  <!-- Defines the position actuators (servos) that control each joint -->
-  <!-- COMMENTED OUT FOR DIRECT JOINT CONTROL VIA data.qpos
   <actuator>
     <!-- Position controllers for right leg with full ±180° range -->
-    <position name="hip_x_right" joint="hip_x_right" kp="19.6" ctrlrange="-180 180"/>
-    <position name="hip_z_right" joint="hip_z_right" kp="20.0" ctrlrange="-180 180"/>
-    <position name="hip_y_right" joint="hip_y_right" kp="19.6" ctrlrange="-180 180"/>
-    <position name="knee_right"  joint="knee_right"  kp="20.2" ctrlrange="-180 180"/>
+    <position name="hip_x_right" joint="hip_x_right" ctrlrange="-180 180" class="hip_position"/>
+    <position name="hip_y_right" joint="hip_y_right" ctrlrange="-180 180" class="hip_position"/>
+    <position name="knee_right"  joint="knee_right"  ctrlrange="-180 180" class="knee_position"/>
     
     <!-- Position controllers for left leg with full ±180° range -->
-    <position name="hip_x_left"  joint="hip_x_left"  kp="19.6" ctrlrange="-180 180"/>
-    <position name="hip_z_left"  joint="hip_z_left"  kp="20.0" ctrlrange="-180 180"/>
-    <position name="hip_y_left"  joint="hip_y_left"  kp="19.6" ctrlrange="-180 180"/>
-    <position name="knee_left"   joint="knee_left"   kp="20.2" ctrlrange="-180 180"/>
+    <position name="hip_x_left"  joint="hip_x_left"  ctrlrange="-180 180" class="hip_position"/>
+    <position name="hip_y_left"  joint="hip_y_left"  ctrlrange="-180 180" class="hip_position"/>
+    <position name="knee_left"   joint="knee_left"   ctrlrange="-180 180" class="knee_position"/>
   </actuator>
-  -->
+
+  <!-- Sensors for ZMP calculation -->
+  <sensor>
+    <!-- Subtree sensors for whole robot dynamics -->
+    <subtreecom name="subtreecom" body="torso"/>
+    <subtreelinvel name="subtreelinvel" body="torso"/>
+    <subtreeangmom name="subtreeangmom" body="torso"/>
+  </sensor>
+
 </mujoco>

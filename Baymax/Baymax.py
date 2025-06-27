@@ -29,15 +29,11 @@ LEFT_KNEE_RAMP_DURATION = 0.4
 CYLINDER_LEGS = False  # Set to True for flat-bottomed (cylinder) legs, False for rounded (capsule) legs
 
 # === Actuation Target Angles (degrees) ===
-RIGHT_KNEE_TARGET_ANGLE = 0  # Target angle for right knee actuator
-RIGHT_HIP_TARGET_ANGLE = 90   # Target angle for right hip actuator Y
+RIGHT_KNEE_TARGET_ANGLE = -40  # Target angle for right knee actuator
+RIGHT_HIP_TARGET_ANGLE = -90   # Target angle for right hip actuator Y
 LEFT_HIP_TARGET_ANGLE = 0   # Target angle for left hip actuator Y
 LEFT_KNEE_TARGET_ANGLE = 0     # Target angle for left knee actuator
 LEAN_ANGLE = 0  # degrees, adjust as needed # x hip rotation
-
-# === Hip Z (Rotation) Target Angles ===
-RIGHT_HIP_Z_TARGET = 0  # degrees - positive rotates leg outward (axis="0 0 1")
-LEFT_HIP_Z_TARGET = 0   # degrees - keep left leg straight (axis="0 0 -1")
 
 # === Switched Leg Target Angles (degrees) ===
 # SWITCHED_RIGHT_KNEE_TARGET_ANGLE = 0    # Right leg straightens
@@ -116,40 +112,12 @@ left_knee_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, '
 hip_x_left_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, 'hip_x_left')
 hip_x_right_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, 'hip_x_right')
 
-# Find the hip_z (rotation) joints and actuators
-hip_z_left_joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_z_left')
-hip_z_right_joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_z_right')
-hip_z_left_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, 'hip_z_left')
-hip_z_right_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, 'hip_z_right')
-print(f"\nZ rotation IDs:")
-print(f"Left hip Z - Joint: {hip_z_left_joint_id}, Actuator: {hip_z_left_actuator_id}")
-print(f"Right hip Z - Joint: {hip_z_right_joint_id}, Actuator: {hip_z_right_actuator_id}")
-
-# Let the simulation stabilize for a few steps before taking initial height
-for _ in range(100):  # Run 100 steps to let the robot settle
-    # Always apply Z rotation targets
-    data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-    data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
-    mujoco.mj_step(model, data)
-initial_torso_height = data.xpos[torso_id][2]  # Store initial torso height (z-coordinate)
-
-# Initialize movement flag to ensure joints are only moved once
-moved = False
-angle_ramp_started = False
-
-# Initialize leg switching variables
-# leg_switch_triggered = False
-# leg_switch_start_time = None
-# leg_switch_completed = False
-
 # Store initial joint angles for later comparison
 initial_angles = {
     'left_hip': data.qpos[model.jnt_qposadr[left_hip_joint_id]],
     'right_hip': data.qpos[model.jnt_qposadr[right_hip_joint_id]],
     'left_knee': data.qpos[model.jnt_qposadr[left_knee_joint_id]],
-    'right_knee': data.qpos[model.jnt_qposadr[right_knee_joint_id]],
-    'left_hip_z': np.degrees(data.qpos[hip_z_left_joint_id]),
-    'right_hip_z': np.degrees(data.qpos[hip_z_right_joint_id])
+    'right_knee': data.qpos[model.jnt_qposadr[right_knee_joint_id]]
 }
 
 # Print initial angles for debugging (uncomment for troubleshooting)
@@ -163,19 +131,15 @@ plot_data = {
     'time': [],
     'hip_y_target_right': [],
     'hip_x_target_right': [],
-    'hip_z_target_right': [],
     'knee_target_right': [],
     'hip_y_actual_right': [],
     'hip_x_actual_right': [],
-    'hip_z_actual_right': [],
     'knee_actual_right': [],
     'hip_y_target_left': [],
     'hip_x_target_left': [],
-    'hip_z_target_left': [],
     'knee_target_left': [],
     'hip_y_actual_left': [],
     'hip_x_actual_left': [],
-    'hip_z_actual_left': [],
     'knee_actual_left': []
 }
 
@@ -210,29 +174,25 @@ def get_all_joint_angles(model, data):
     # Get RIGHT joint IDs
     hip_y_right_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_y_right')
     hip_x_right_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_x_right')
-    hip_z_right_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_z_right')
     knee_right_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'knee_right')
     
     # Get RIGHT joint angles (convert from radians to degrees)
     hip_y_angle_right = np.degrees(data.qpos[hip_y_right_id])
     hip_x_angle_right = np.degrees(data.qpos[hip_x_right_id])
-    hip_z_angle_right = np.degrees(data.qpos[hip_z_right_id])
     knee_angle_right = np.degrees(data.qpos[knee_right_id])
 
     # Get LEFT joint IDs
     hip_y_left_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_y_left')
     hip_x_left_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_x_left')
-    hip_z_left_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'hip_z_left')
     knee_left_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, 'knee_left')
 
     # Get LEFT joint angles (convert from radians to degrees)
     hip_y_angle_left = np.degrees(data.qpos[hip_y_left_id])
     hip_x_angle_left = np.degrees(data.qpos[hip_x_left_id])
-    hip_z_angle_left = np.degrees(data.qpos[hip_z_left_id])
     knee_angle_left = np.degrees(data.qpos[knee_left_id])
     
-    return (hip_y_angle_right, hip_x_angle_right, hip_z_angle_right, knee_angle_right,
-            hip_y_angle_left, hip_x_angle_left, hip_z_angle_left, knee_angle_left)
+    return (hip_y_angle_right, hip_x_angle_right, knee_angle_right,
+            hip_y_angle_left, hip_x_angle_left, knee_angle_left)
 
 def plot_joint_angles():
     """
@@ -245,100 +205,88 @@ def plot_joint_angles():
         print("No data collected for plotting.")
         return
     
-    print(f"Time range: {min(plot_data['time']):.2f}s to {max(plot_data['time']):.2f}s")
-    print(f"Sample target angles - Hip Y: {plot_data['hip_y_target_right'][-1]:.2f}°, Knee: {plot_data['knee_target_right'][-1]:.2f}°")
-    print(f"Sample actual angles - Hip Y: {plot_data['hip_y_actual_right'][-1]:.2f}°, Knee: {plot_data['knee_actual_right'][-1]:.2f}°")
+    # Read current parameters from XML file
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
     
-    # Convert lists to numpy arrays
-    time_array = np.array(plot_data['time'])
-    # Right Leg Data
-    hip_y_target_right = np.array(plot_data['hip_y_target_right'])
-    hip_x_target_right = np.array(plot_data['hip_x_target_right'])
-    hip_z_target_right = np.array(plot_data['hip_z_target_right'])
-    knee_target_right = np.array(plot_data['knee_target_right'])
-    hip_y_actual_right = np.array(plot_data['hip_y_actual_right'])
-    hip_x_actual_right = np.array(plot_data['hip_x_actual_right'])
-    hip_z_actual_right = np.array(plot_data['hip_z_actual_right'])
-    knee_actual_right = np.array(plot_data['knee_actual_right'])
-    # Left Leg Data
-    hip_y_target_left = np.array(plot_data['hip_y_target_left'])
-    hip_x_target_left = np.array(plot_data['hip_x_target_left'])
-    hip_z_target_left = np.array(plot_data['hip_z_target_left'])
-    knee_target_left = np.array(plot_data['knee_target_left'])
-    hip_y_actual_left = np.array(plot_data['hip_y_actual_left'])
-    hip_x_actual_left = np.array(plot_data['hip_x_actual_left'])
-    hip_z_actual_left = np.array(plot_data['hip_z_actual_left'])
-    knee_actual_left = np.array(plot_data['knee_actual_left'])
+    # Get joint parameters from the joint_stiffness class
+    joint_stiffness = root.find(".//default/default[@class='joint_stiffness']/joint")
+    if joint_stiffness is None:
+        raise ValueError("Could not find joint_stiffness class in XML file")
     
-    print("Creating plots...")
+    stiffness = joint_stiffness.get('stiffness')
+    damping = joint_stiffness.get('damping')
+    if stiffness is None or damping is None:
+        raise ValueError("Stiffness or damping values not found in joint_stiffness class")
     
-    # Create a single figure with a 4x2 grid of subplots
-    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
-    fig.suptitle('Target vs Actual Joint Angles Over Time', fontsize=16)
+    stiffness = int(stiffness)
+    damping = int(damping)
+    
+    # Get default kp value from the defaults section
+    position_default = root.find(".//default/position")
+    if position_default is None:
+        raise ValueError("Could not find position defaults in XML file")
+    
+    kp = position_default.get('kp')
+    if kp is None:
+        raise ValueError("kp value not found in position defaults")
+    
+    kp = float(kp)
+    
+    PARAM_STR = f"(kp={kp}, stiffness={stiffness}, damping={damping})"
+    
+    # Create a single figure with a 3x2 grid of subplots
+    fig, axes = plt.subplots(3, 2, figsize=(15, 10))
+    fig.suptitle(f'Target vs Actual Joint Angles Over Time\n{PARAM_STR}', fontsize=16)
 
     # --- Right Leg Plots (Column 0) ---
     # Hip Y (Right)
-    axes[0, 0].plot(time_array, hip_y_target_right, 'b-', label='Target', linewidth=2)
-    axes[0, 0].plot(time_array, hip_y_actual_right, 'r--', label='Actual', linewidth=2)
-    axes[0, 0].set_title('Right Hip Y (Forward/Back)')
+    axes[0, 0].plot(plot_data['time'], plot_data['hip_y_target_right'], 'b-', label='Target', linewidth=2)
+    axes[0, 0].plot(plot_data['time'], plot_data['hip_y_actual_right'], 'r--', label='Actual', linewidth=2)
+    axes[0, 0].set_title(f'Right Hip Y (Forward/Back)', fontsize=9)  # Added fontsize=9
     axes[0, 0].set_ylabel('Angle (degrees)')
     axes[0, 0].legend()
     axes[0, 0].grid(True)
 
     # Hip X (Right)
-    axes[1, 0].plot(time_array, hip_x_target_right, 'b-', label='Target', linewidth=2)
-    axes[1, 0].plot(time_array, hip_x_actual_right, 'r--', label='Actual', linewidth=2)
-    axes[1, 0].set_title('Right Hip X (Side-to-Side)')
+    axes[1, 0].plot(plot_data['time'], plot_data['hip_x_target_right'], 'b-', label='Target', linewidth=2)
+    axes[1, 0].plot(plot_data['time'], plot_data['hip_x_actual_right'], 'r--', label='Actual', linewidth=2)
+    axes[1, 0].set_title(f'Right Hip X (Side-to-Side)', fontsize=9)  # Added fontsize=9
     axes[1, 0].set_ylabel('Angle (degrees)')
     axes[1, 0].legend()
     axes[1, 0].grid(True)
 
-    # Hip Z (Right)
-    axes[2, 0].plot(time_array, hip_z_target_right, 'b-', label='Target', linewidth=2)
-    axes[2, 0].plot(time_array, hip_z_actual_right, 'r--', label='Actual', linewidth=2)
-    axes[2, 0].set_title('Right Hip Z (Rotation)')
+    # Knee (Right)
+    axes[2, 0].plot(plot_data['time'], plot_data['knee_target_right'], 'b-', label='Target', linewidth=2)
+    axes[2, 0].plot(plot_data['time'], plot_data['knee_actual_right'], 'r--', label='Actual', linewidth=2)
+    axes[2, 0].set_title(f'Right Knee', fontsize=9)  # Added fontsize=9
     axes[2, 0].set_ylabel('Angle (degrees)')
+    axes[2, 0].set_xlabel('Time (s)')
     axes[2, 0].legend()
     axes[2, 0].grid(True)
 
-    # Knee (Right)
-    axes[3, 0].plot(time_array, knee_target_right, 'b-', label='Target', linewidth=2)
-    axes[3, 0].plot(time_array, knee_actual_right, 'r--', label='Actual', linewidth=2)
-    axes[3, 0].set_title('Right Knee (Flexion/Extension)')
-    axes[3, 0].set_xlabel('Time (s)')
-    axes[3, 0].set_ylabel('Angle (degrees)')
-    axes[3, 0].legend()
-    axes[3, 0].grid(True)
-
     # --- Left Leg Plots (Column 1) ---
     # Hip Y (Left)
-    axes[0, 1].plot(time_array, hip_y_target_left, 'b-', label='Target', linewidth=2)
-    axes[0, 1].plot(time_array, hip_y_actual_left, 'r--', label='Actual', linewidth=2)
-    axes[0, 1].set_title('Left Hip Y (Forward/Back)')
+    axes[0, 1].plot(plot_data['time'], plot_data['hip_y_target_left'], 'b-', label='Target', linewidth=2)
+    axes[0, 1].plot(plot_data['time'], plot_data['hip_y_actual_left'], 'r--', label='Actual', linewidth=2)
+    axes[0, 1].set_title(f'Left Hip Y (Forward/Back)', fontsize=9)  # Added fontsize=9
     axes[0, 1].legend()
     axes[0, 1].grid(True)
 
     # Hip X (Left)
-    axes[1, 1].plot(time_array, hip_x_target_left, 'b-', label='Target', linewidth=2)
-    axes[1, 1].plot(time_array, hip_x_actual_left, 'r--', label='Actual', linewidth=2)
-    axes[1, 1].set_title('Left Hip X (Side-to-Side)')
+    axes[1, 1].plot(plot_data['time'], plot_data['hip_x_target_left'], 'b-', label='Target', linewidth=2)
+    axes[1, 1].plot(plot_data['time'], plot_data['hip_x_actual_left'], 'r--', label='Actual', linewidth=2)
+    axes[1, 1].set_title(f'Left Hip X (Side-to-Side)', fontsize=9)  # Added fontsize=9
     axes[1, 1].legend()
     axes[1, 1].grid(True)
 
-    # Hip Z (Left)
-    axes[2, 1].plot(time_array, hip_z_target_left, 'b-', label='Target', linewidth=2)
-    axes[2, 1].plot(time_array, hip_z_actual_left, 'r--', label='Actual', linewidth=2)
-    axes[2, 1].set_title('Left Hip Z (Rotation)')
+    # Knee (Left)
+    axes[2, 1].plot(plot_data['time'], plot_data['knee_target_left'], 'b-', label='Target', linewidth=2)
+    axes[2, 1].plot(plot_data['time'], plot_data['knee_actual_left'], 'r--', label='Actual', linewidth=2)
+    axes[2, 1].set_title(f'Left Knee', fontsize=9)  # Added fontsize=9
+    axes[2, 1].set_xlabel('Time (s)')
     axes[2, 1].legend()
     axes[2, 1].grid(True)
-
-    # Knee (Left)
-    axes[3, 1].plot(time_array, knee_target_left, 'b-', label='Target', linewidth=2)
-    axes[3, 1].plot(time_array, knee_actual_left, 'r--', label='Actual', linewidth=2)
-    axes[3, 1].set_title('Left Knee (Flexion/Extension)')
-    axes[3, 1].set_xlabel('Time (s)')
-    axes[3, 1].legend()
-    axes[3, 1].grid(True)
     
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     
@@ -348,16 +296,14 @@ def plot_joint_angles():
     
     # Print summary statistics
     print("\n--- Right Leg Summary ---")
-    print(f"Hip Y - Max Error: {np.max(np.abs(hip_y_target_right - hip_y_actual_right)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_y_target_right - hip_y_actual_right)**2)):.2f}°")
-    print(f"Hip X - Max Error: {np.max(np.abs(hip_x_target_right - hip_x_actual_right)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_x_target_right - hip_x_actual_right)**2)):.2f}°")
-    print(f"Hip Z - Max Error: {np.max(np.abs(hip_z_target_right - hip_z_actual_right)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_z_target_right - hip_z_actual_right)**2)):.2f}°")
-    print(f"Knee  - Max Error: {np.max(np.abs(knee_target_right - knee_actual_right)):.2f}°, RMS Error: {np.sqrt(np.mean((knee_target_right - knee_actual_right)**2)):.2f}°")
+    print(f"Hip Y - Max Error: {np.max(np.abs(plot_data['hip_y_target_right'] - plot_data['hip_y_actual_right'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['hip_y_target_right'] - plot_data['hip_y_actual_right'])**2)):.2f}°")
+    print(f"Hip X - Max Error: {np.max(np.abs(plot_data['hip_x_target_right'] - plot_data['hip_x_actual_right'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['hip_x_target_right'] - plot_data['hip_x_actual_right'])**2)):.2f}°")
+    print(f"Knee  - Max Error: {np.max(np.abs(plot_data['knee_target_right'] - plot_data['knee_actual_right'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['knee_target_right'] - plot_data['knee_actual_right'])**2)):.2f}°")
     
     print("\n--- Left Leg Summary ---")
-    print(f"Hip Y - Max Error: {np.max(np.abs(hip_y_target_left - hip_y_actual_left)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_y_target_left - hip_y_actual_left)**2)):.2f}°")
-    print(f"Hip X - Max Error: {np.max(np.abs(hip_x_target_left - hip_x_actual_left)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_x_target_left - hip_x_actual_left)**2)):.2f}°")
-    print(f"Hip Z - Max Error: {np.max(np.abs(hip_z_target_left - hip_z_actual_left)):.2f}°, RMS Error: {np.sqrt(np.mean((hip_z_target_left - hip_z_actual_left)**2)):.2f}°")
-    print(f"Knee  - Max Error: {np.max(np.abs(knee_target_left - knee_actual_left)):.2f}°, RMS Error: {np.sqrt(np.mean((knee_target_left - knee_actual_left)**2)):.2f}°")
+    print(f"Hip Y - Max Error: {np.max(np.abs(plot_data['hip_y_target_left'] - plot_data['hip_y_actual_left'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['hip_y_target_left'] - plot_data['hip_y_actual_left'])**2)):.2f}°")
+    print(f"Hip X - Max Error: {np.max(np.abs(plot_data['hip_x_target_left'] - plot_data['hip_x_actual_left'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['hip_x_target_left'] - plot_data['hip_x_actual_left'])**2)):.2f}°")
+    print(f"Knee  - Max Error: {np.max(np.abs(plot_data['knee_target_left'] - plot_data['knee_actual_left'])):.2f}°, RMS Error: {np.sqrt(np.mean((plot_data['knee_target_left'] - plot_data['knee_actual_left'])**2)):.2f}°")
 
 # === Angle Calculation Functions ===
 def print_leg_angles(model, data):
@@ -525,7 +471,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     timestep = model.opt.timestep
     steps_per_frame = int(1.0 / (fps * timestep))
     SIMULATION_SPEED = 6.0  # 1.0 is real-time, higher values are slower
-    MAX_SIM_TIME = 10.0     # Limit simulation to 10 seconds
+    MAX_SIM_TIME = 6.0     # Limit simulation to 6 seconds
 
     # --- Screenshot logic ---
     screenshot_times = []
@@ -546,12 +492,30 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     min_right_foot_height = float('inf')
     frame_count = 0 # Initialize frame counter for plotting
     
+    # Let the simulation stabilize for a few steps before taking initial height
+    for _ in range(100):  # Run 100 steps to let the robot settle
+        mujoco.mj_step(model, data)
+    initial_torso_height = data.xpos[torso_id][2]  # Store initial torso height (z-coordinate)
+
+    # Initialize movement flag to ensure joints are only moved once
+    moved = False
+    angle_ramp_started = False
+
+    # Initialize leg switching variables
+    # leg_switch_triggered = False
+    # leg_switch_start_time = None
+    # leg_switch_completed = False
+    
     while viewer.is_running():
         current_time = time.time() - start_time
         
-        # ALWAYS maintain Z rotation targets (don't zero them)
-        data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-        data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
+        # Set hip X (side-to-side) rotations based on LEAN_ANGLE
+        if LEAN_ANGLE != 0:
+            data.ctrl[hip_x_left_actuator_id] = LEAN_ANGLE
+            data.ctrl[hip_x_right_actuator_id] = -LEAN_ANGLE
+        else:
+            data.ctrl[hip_x_left_actuator_id] = 0
+            data.ctrl[hip_x_right_actuator_id] = 0
 
         # Collect data for plotting (every 10th frame to avoid too much data)
         if frame_count % 10 == 0:
@@ -559,23 +523,19 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Right leg
             hip_y_target_current_right = data.ctrl[right_hip_actuator_id]
             hip_x_target_current_right = data.ctrl[hip_x_right_actuator_id]
-            hip_z_target_current_right = data.ctrl[hip_z_right_actuator_id]
             knee_target_current_right = data.ctrl[right_knee_actuator_id]
             # Left leg
             hip_y_target_current_left = data.ctrl[left_hip_actuator_id]
             hip_x_target_current_left = data.ctrl[hip_x_left_actuator_id]
-            hip_z_target_current_left = data.ctrl[hip_z_left_actuator_id]
             knee_target_current_left = data.ctrl[left_knee_actuator_id]
             
             # Get current actual angles using direct MuJoCo readings
             hip_y_actual_current_right = get_single_joint_angle(model, data, 'hip_y_right')
             hip_x_actual_current_right = get_single_joint_angle(model, data, 'hip_x_right')
-            hip_z_actual_current_right = get_single_joint_angle(model, data, 'hip_z_right')
             knee_actual_current_right = get_single_joint_angle(model, data, 'knee_right')
             
             hip_y_actual_current_left = get_single_joint_angle(model, data, 'hip_y_left')
             hip_x_actual_current_left = get_single_joint_angle(model, data, 'hip_x_left')
-            hip_z_actual_current_left = get_single_joint_angle(model, data, 'hip_z_left')
             knee_actual_current_left = get_single_joint_angle(model, data, 'knee_left')
             
             # Store data
@@ -583,20 +543,16 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Right leg data
             plot_data['hip_y_target_right'].append(hip_y_target_current_right)
             plot_data['hip_x_target_right'].append(hip_x_target_current_right)
-            plot_data['hip_z_target_right'].append(hip_z_target_current_right)
             plot_data['knee_target_right'].append(knee_target_current_right)
             plot_data['hip_y_actual_right'].append(hip_y_actual_current_right)
             plot_data['hip_x_actual_right'].append(hip_x_actual_current_right)
-            plot_data['hip_z_actual_right'].append(hip_z_actual_current_right)
             plot_data['knee_actual_right'].append(knee_actual_current_right)
             # Left leg data
             plot_data['hip_y_target_left'].append(hip_y_target_current_left)
             plot_data['hip_x_target_left'].append(hip_x_target_current_left)
-            plot_data['hip_z_target_left'].append(hip_z_target_current_left)
             plot_data['knee_target_left'].append(knee_target_current_left)
             plot_data['hip_y_actual_left'].append(hip_y_actual_current_left)
             plot_data['hip_x_actual_left'].append(hip_x_actual_current_left)
-            plot_data['hip_z_actual_left'].append(hip_z_actual_current_left)
             plot_data['knee_actual_left'].append(knee_actual_current_left)
         
         # Take screenshots at specified times
@@ -636,8 +592,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
                 data.ctrl[hip_x_right_actuator_id] = 0
 
             # Always hold Z rotation and other joints at their target angles (0 or otherwise)
-            data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-            data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
+            data.ctrl[hip_x_right_actuator_id] = RIGHT_HIP_TARGET_ANGLE
+            data.ctrl[hip_x_left_actuator_id] = LEFT_HIP_TARGET_ANGLE
             data.ctrl[right_knee_actuator_id] = RIGHT_KNEE_TARGET_ANGLE
             data.ctrl[right_hip_actuator_id] = 0  # Hold at 0 during lean phase
             data.ctrl[left_hip_actuator_id] = 0   # Hold at 0 during lean phase
@@ -689,7 +645,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             else:
                 data.ctrl[left_knee_actuator_id] = 0
 
-            # Always maintain lean and Z rotation at their target angles
+            # Always maintain lean at target angles
             if LEAN_ANGLE != 0:
                 data.ctrl[hip_x_left_actuator_id] = LEAN_ANGLE
                 data.ctrl[hip_x_right_actuator_id] = -LEAN_ANGLE
@@ -697,8 +653,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
                 data.ctrl[hip_x_left_actuator_id] = 0
                 data.ctrl[hip_x_right_actuator_id] = 0
 
-            data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-            data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
+            # No need to set hip X rotations here - they're maintained by the lean control above
 
         # Once all ramps are complete, maintain all joints at their final target angles
         else:
@@ -707,30 +662,18 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             data.ctrl[right_hip_actuator_id] = RIGHT_HIP_TARGET_ANGLE
             data.ctrl[left_hip_actuator_id] = LEFT_HIP_TARGET_ANGLE
             data.ctrl[left_knee_actuator_id] = LEFT_KNEE_TARGET_ANGLE
-            data.ctrl[hip_x_left_actuator_id] = LEAN_ANGLE
-            data.ctrl[hip_x_right_actuator_id] = -LEAN_ANGLE
-            data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-            data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
+            # Set lean angles
+            if LEAN_ANGLE != 0:
+                data.ctrl[hip_x_left_actuator_id] = LEAN_ANGLE
+                data.ctrl[hip_x_right_actuator_id] = -LEAN_ANGLE
+            else:
+                data.ctrl[hip_x_left_actuator_id] = 0
+                data.ctrl[hip_x_right_actuator_id] = 0
         
         # Run fixed number of steps for smooth video
         for _ in range(steps_per_frame):
-            # ALWAYS maintain Z rotation targets before each physics step
-            data.ctrl[hip_z_right_actuator_id] = RIGHT_HIP_Z_TARGET
-            data.ctrl[hip_z_left_actuator_id] = LEFT_HIP_Z_TARGET
-            
-            # Debug: Print Z rotation angles and control signals before step
-            right_z_angle = np.degrees(data.qpos[hip_z_right_joint_id])
-            right_z_ctrl = data.ctrl[hip_z_right_actuator_id]
-            right_z_qvel = np.degrees(data.qvel[hip_z_right_joint_id])  # Angular velocity
-            right_z_qacc = np.degrees(data.qacc[hip_z_right_joint_id])  # Angular acceleration
-            print(f"\nRight Hip Z - Angle: {right_z_angle:.2f}°, Control: {right_z_ctrl:.2f}, Velocity: {right_z_qvel:.2f}°/s, Acceleration: {right_z_qacc:.2f}°/s²")
-            
             mujoco.mj_step(model, data)
             
-            # Debug: Print Z rotation angles after step
-            right_z_angle_after = np.degrees(data.qpos[hip_z_right_joint_id])
-            print(f"After step - Right Hip Z Angle: {right_z_angle_after:.2f}°, Change: {right_z_angle_after - right_z_angle:.2f}°")
-        
         # Update the overall COM site position AFTER physics step
         com = compute_overall_com(model, data)
         print(f"COM position: {com}")  # Debug print
@@ -741,9 +684,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             'left_hip': data.qpos[model.jnt_qposadr[left_hip_joint_id]],
             'right_hip': data.qpos[model.jnt_qposadr[right_hip_joint_id]],
             'left_knee': data.qpos[model.jnt_qposadr[left_knee_joint_id]],
-            'right_knee': data.qpos[model.jnt_qposadr[right_knee_joint_id]],
-            'left_hip_z': np.degrees(data.qpos[hip_z_left_joint_id]),
-            'right_hip_z': np.degrees(data.qpos[hip_z_right_joint_id])
+            'right_knee': data.qpos[model.jnt_qposadr[right_knee_joint_id]]
         }
         angle_changes = {
             joint: current_angles[joint] - initial_angles[joint]
@@ -751,8 +692,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         }
         if moved:
             print(f"\nCurrent Z rotation angles:")
-            print(f"Right hip Z: {current_angles['right_hip_z']:.2f}°")
-            print(f"Left hip Z: {current_angles['left_hip_z']:.2f}°")
+            print(f"Right hip Z: {current_angles['right_hip']:.2f}°")
+            print(f"Left hip Z: {current_angles['left_hip']:.2f}°")
         # Update the viewer window
         viewer.sync()
         # Record video frame if enabled
