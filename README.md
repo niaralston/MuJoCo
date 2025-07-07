@@ -2,9 +2,18 @@
 
 Hi Professor Li,
 
-I am currently working on a humanoid robot simulation using MuJoCo. The main development is focused on two key files:
+I am currently working on a humanoid robot simulation using MuJoCo. The main development is now focused on implementing preview control for walking.
 
-## Main Files
+## Current Focus
+[`PreviewControlVisualizer.py`](./Baymax/PreviewControlVisualizer.py) - A new implementation that uses preview control for walking:
+- Preview control algorithm for walking pattern generation
+- ZMP and CoM trajectory visualization
+- Basic inverse kinematics for leg control
+- Data collection and plotting
+- Step pattern generation and tracking
+- Error integrator visualization
+
+## Previous Development Files
 1. [`Baymax.xml`](./Baymax/Baymax.xml) - The robot model definition file which includes:
    - Robot structure and joint configurations
    - Physical properties (mass, friction, etc.)
@@ -12,25 +21,26 @@ I am currently working on a humanoid robot simulation using MuJoCo. The main dev
    - Visual properties and sensor configurations
    - Joint stiffness and damping parameters
 
-2. [`BaymaxPIDControl.py`](./Baymax/BaymaxPIDControl.py) - The control implementation which includes:
-   - Currently implemented P control system for joint angles
-   - In progress: Implementation of I (Integral) and D (Derivative) control components
-   - Zero Moment Point (ZMP) calculation and visualization
-   - Center of Mass (COM) tracking
-   - The Start of stability analysis 
+2. [`BaymaxPIDControl.py`](./Baymax/BaymaxPIDControl.py) - The initial control implementation which includes:
+   - Basic P (Proportional) control system for joint angles
+   - Simple ZMP calculation
+   - Basic COM tracking
    - Data collection and plotting functionality
-   - Simulation visualization and recording capabilities
+   - Simulation visualization
 
 ## Current Features
 - Full humanoid leg model with torso
-- Proportional (P) control with configurable gains
-- Real-time stability monitoring
+- Preview control for walking pattern generation
+- ZMP and CoM tracking
 - Performance analysis and visualization
 - Data logging and plotting
+- Step pattern generation
+- Error integrator tracking
 
 ## In Development
-- Integral (I) control for reducing steady-state error
-- Derivative (D) control for improved dynamic response
-- Fine-tuning of control parameters for optimal performance
+- Fine-tuning of preview control parameters
+- Improving walking pattern generation
+- Testing different walking patterns
+- Working on walking stability
 
-The simulation currently focuses on achieving stable control of the humanoid robot's legs using proportional control, with ongoing work to implement and tune the integral and derivative components for enhanced performance. 
+The simulation has progressed from basic P control to preview control for walking pattern generation. The current focus is on implementing preview control for bipedal walking, with ongoing work to develop stable walking patterns. 
